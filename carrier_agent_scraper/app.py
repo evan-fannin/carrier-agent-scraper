@@ -5,19 +5,7 @@ from carrier_agent_scraper import io
 from carrier_agent_scraper import zipcodes as zp
 from carrier_agent_scraper import scraper
 
-from bs4 import BeautifulSoup # parsing html
-
-import pandas as pd
-
-# selenium for automating web browser
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.select import Select
-
-import time
+import os
 import sys, traceback
 
 
@@ -28,10 +16,25 @@ class App:
         self.state = state
         self.WEBDRIVER_EXECUTABLE_PATH = r'\Users\ntmkef30\Downloads\chromedriver_win32\chromedriver.exe'
         self.DATA_UPLOAD_DOWNLOAD_PATH = self.set_upload_download_path()
+        self.create_file_directories()
+
+    def create_file_directories(self):
+        base_path = os.path.expanduser("~\Documents")
+        all_carriers = os.path.join(base_path, "carrier_scraping_agent_data")
+
+        if not os.path.isdir(all_carriers):
+            os.mkdir(all_carriers)
+
+        carrier_directory = os.path.join(all_carriers, self.carrier)
+
+        if not os.path.isdir(carrier_directory):
+            os.mkdir(carrier_directory)
 
     def set_upload_download_path(self):
         state = self.state.lower()
-        data_upload_download_path = f"\\Users\\ntmkef30\\Documents\\{self.carrier}\\{state}.csv"
+        base_path = os.path.expanduser("~\Documents\\carrier_scraping_agent_data")
+        specific_path = f"{self.carrier}\\{state}.csv"
+        data_upload_download_path = os.path.join(base_path, specific_path)
         return data_upload_download_path
 
     def run(self):
