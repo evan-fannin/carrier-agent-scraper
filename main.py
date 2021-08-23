@@ -5,6 +5,7 @@
 
 from carrier_agent_scraper.app import App
 import os
+import sys
 
 
 def resource_path(relative_path):
@@ -21,7 +22,6 @@ def resource_path(relative_path):
 _zips_json = resource_path(os.path.join(os.path.dirname(os.path.abspath(__file__)), "zips.json.bz2"))
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     carrier = input("Enter carrier name: \n")
     state = input("Enter state abbreviation: \n")

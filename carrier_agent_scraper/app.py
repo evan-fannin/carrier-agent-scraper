@@ -46,6 +46,7 @@ class App:
         io.save_dataframe(df, self.DATA_UPLOAD_DOWNLOAD_PATH)  # write to files
 
     def format_carrier_name(self, carrier):
+        carrier = carrier.lower()
         word_list = carrier.split()
         formatted_name = "_".join(word_list)
         return formatted_name

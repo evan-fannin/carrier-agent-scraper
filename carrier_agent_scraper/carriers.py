@@ -218,10 +218,10 @@ class Dairyland:
         results = soup.find_all('div', class_='row Agent')
 
         for agency in results:
-            name = parse_name(agency)
-            address = parse_address(agency)
-            number = parse_number(agency)
-            agent_zip = parse_agent_zip(address)
+            name = self.parse_name(agency)
+            address = self.parse_address(agency)
+            number = self.parse_number(agency)
+            agent_zip = self.parse_agent_zip(address)
 
             if agent_zip == zipcode:
                 entry = [name, address, number, zipcode]
