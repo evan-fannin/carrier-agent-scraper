@@ -11,10 +11,11 @@ import sys, traceback
 
 class App:
 
-    def __init__(self, carrier, state):
+    def __init__(self, tk_window, carrier, state):
+        self.tk_window = tk_window
         self.carrier = self.format_carrier_name(carrier)
         self.state = state
-        self.WEBDRIVER_EXECUTABLE_PATH = r'\Users\ntmkef30\Downloads\chromedriver_win32\chromedriver.exe'
+        # self.WEBDRIVER_EXECUTABLE_PATH = self.set_webdriver_path()
         self.DATA_UPLOAD_DOWNLOAD_PATH = self.set_upload_download_path()
         self.create_file_directories()
 
@@ -29,6 +30,13 @@ class App:
 
         if not os.path.isdir(carrier_directory):
             os.mkdir(carrier_directory)
+
+    # def set_webdriver_path(self):
+    #     base_path = os.path.expanduser("~\Downloads")
+    #     specific_path = "chromedriver_win32\chromedriver.exe"
+    #     webdriver_exec_path = os.path.join(base_path, specific_path)
+    #     return webdriver_exec_path
+
 
     def set_upload_download_path(self):
         state = self.state.lower()
@@ -65,7 +73,7 @@ class App:
 
         number_left = len(zipcodes)
 
-        print(str(number_left) + " zipcodes left to process.\n")
+        # print(str(number_left) + " zipcodes left to process.\n")
 
         agencies = []
 
@@ -73,16 +81,17 @@ class App:
             try:
                 data = self.get_zip_data(zipcode)
             except Exception as error:
-                print('Failure.')
-                print(repr(error))
-                traceback.print_exc(file=sys.stdout)
+                # print('Failure.')
+                # print(repr(error))
+                # traceback.print_exc(file=sys.stdout)
                 return agencies
 
             agencies.extend(data)
 
             number_completed += 1
-            print("Processed results for " + str(zipcode) + ";\t" +
-                  str(number_completed) + " of " + str(total))
+            progress_string = ("Processed results for " + str(zipcode) + ";\t"
+                               + str(number_completed) + " of " + str(total))
+            self.tk_window.update_progress(progress_string)
 
         return agencies
 

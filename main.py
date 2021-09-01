@@ -6,6 +6,8 @@
 from carrier_agent_scraper.app import App
 import os
 import sys
+import tkinter as tk
+from gui.display import Application
 
 
 def resource_path(relative_path):
@@ -23,9 +25,29 @@ _zips_json = resource_path(os.path.join(os.path.dirname(os.path.abspath(__file__
 
 
 if __name__ == '__main__':
-    carrier = input("Enter carrier name: \n")
-    state = input("Enter state abbreviation: \n")
-    app = App(carrier, state)
-    app.run()
+    root = tk.Tk()
+    root.title = "Carrier Scraper"
+    root.lift()
+    w = 300  # width for the Tk root
+    h = 300  # height for the Tk root
+
+    # get screen width and height
+    ws = root.winfo_screenwidth()  # width of the screen
+    hs = root.winfo_screenheight()  # height of the screen
+
+    # calculate x and y coordinates for the Tk root window
+    x = (ws / 2) + (ws / 4)
+    y = (hs / 2) - (h / 2)
+
+    # set the dimensions of the screen
+    # and where it is placed
+    root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+
+    app = Application(master=root)
+    app.mainloop()
+    # carrier = input("Enter carrier name: \n")
+    # state = input("Enter state abbreviation: \n")
+    # app = App(carrier, state)
+    # app.run()
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/

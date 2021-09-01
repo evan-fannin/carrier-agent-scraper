@@ -7,9 +7,20 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
+import os
 
+base_path = os.path.expanduser("~\Downloads")
+chromedriver_part = "chromedriver_win32\chromedriver.exe"
+WEBDRIVER_EXECUTABLE_PATH = os.path.join(base_path, chromedriver_part)
 
-WEBDRIVER_EXECUTABLE_PATH = r'\Users\ntmkef30\Downloads\chromedriver_win32\chromedriver.exe'
+def initialize_webdriver():
+    options = webdriver.ChromeOptions()
+    # options.add_argument("--headless")
+    # options.add_argument("--window-size=640,480")
+    options.add_argument("--window-size=640,800")
+    options.add_argument("--log-level=3")
+    driver = webdriver.Chrome(executable_path=WEBDRIVER_EXECUTABLE_PATH, options=options)
+    return driver
 
 
 class BristolWest:
@@ -169,7 +180,7 @@ class Dairyland:
 
     def get_source_code(self, zipcode):
         # initialize and specify executable location because it's hard to add variables to PATH without admin rights
-        driver = webdriver.Chrome(executable_path=WEBDRIVER_EXECUTABLE_PATH)
+        driver = initialize_webdriver()
         driver.get("https://www.dairylandinsurance.com/")
 
         find_agent_button = WebDriverWait(driver, 10).until(
@@ -231,3 +242,123 @@ class Dairyland:
             agencies_in_zip.append(['none in zip', 'none in zip', 'none in zip', zipcode])
 
         return agencies_in_zip
+
+
+class Founders():
+    def __init__(self):
+        pass
+
+    def get_source_code(self, zipcode):
+        # initialize and specify executable location because it's hard to add variables to PATH without admin rights
+        driver = initialize_webdriver()
+        driver.get("https://www.foundersinsurance.com/AgentFinder/Default.aspx")
+
+        # wait until the search bar is found by id or 10 seconds have passed
+        search_bar = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "ctl00_ContentPlaceHolder1_txtZip")))  # the search bar's id
+        search_bar.clear()
+        search_bar.send_keys(zipcode)
+
+        button = driver.find_element_by_id('ctl00_ContentPlaceHolder1_btnSearch')
+        button.click()
+
+        time.sleep(5)
+
+        # Checking for Kemper page errors that occur when some zip codes are searched.
+        #     logs = driver.get_log('browser')
+        #     for log in logs:
+        #         if log['level'] == "SEVERE":
+        #             print("Kemper page error for " + str(zipcode) + ". Moving on.")
+        #             driver.close()
+        #             return 'Error'
+
+        source_code = driver.page_source
+
+        # checking for "no results found" message
+        #     try:
+        #         error_message = driver.find_element_by_xpath(
+        #         '/html/body/app-root/div/find-agent-wizard/search-stepper/section/div/search-agent-map/div/div')
+        #         if error_message.text == "No agents found, please refine your search parameters.":
+        #             print("No results found for " + str(zipcode) + ". Moving on.")
+        #             driver.close()
+        #             return 'No Results'
+        #     except:
+        #         pass
+
+        driver.close()
+
+        return source_code
+
+    def parse_number(self, entry):
+
+        for item in entry:
+
+            if item[:5] == 'PHONE':
+                return item[7:]
+
+        return 'not available'
+
+    def parse_email(self, entry):
+
+        for item in entry:
+
+            if item[:5] == 'EMAIL':
+                return item[7:]
+
+        return 'not available'
+
+    def parse_zipcode(self, string):
+        zipcode = string.split()[-1]
+        zipcode = zipcode.split("-")[0]
+
+        #     if len(zipcode) != 5:
+        #         raise ValueError("Zipcode length not right: " + str(zipcode))
+
+        return zipcode
+
+    def clean_entry(self, entry, searched_zipcode):
+        name = entry[0]
+        address = entry[1] + " " + entry[2]
+        number = parse_number(entry)
+        email = parse_email(entry)
+        zipcode = parse_zipcode(entry[2])
+
+        if zipcode != searched_zipcode:
+            zipcode = parse_zipcode(entry[3])
+            address += " " + entry[3]
+
+        if zipcode != searched_zipcode:
+            raise ValueError("Something wrong with zip code: " + str(zipcode))
+
+        cleaned_entry = [name, address, number, email, zipcode]
+
+        return cleaned_entry, zipcode
+
+    def parse_data(self, source_code, zipcode):
+        soup = BeautifulSoup(source_code, 'html.parser')
+        agencies_in_zip = []
+
+        no_results = soup.find("span", id="ctl00_ContentPlaceHolder1_lblNoAgents")
+
+        if no_results is not None:  # Test for no results.
+            agencies_in_zip.append(['no results', 'no results', 'no results', 'no results', zipcode])
+            return agencies_in_zip
+
+        table = soup.find("table", id="ctl00_ContentPlaceHolder1_gvAgents")
+
+        for row in table.select('tbody tr')[1:]:
+            spans = row.select('td span')
+            entry = []
+
+            for span in spans:
+                entry.append(span.text)
+            entry, entry_zip = clean_entry(entry, zipcode)
+
+            if entry_zip == zipcode:
+                agencies_in_zip.append(entry)
+
+        if len(agencies_in_zip) == 0:
+            agencies_in_zip.append(['no results', 'no results', 'no results', 'no results', zipcode])
+
+        return agencies_in_zip
+
