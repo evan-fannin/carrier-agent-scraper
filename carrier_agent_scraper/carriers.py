@@ -319,12 +319,12 @@ class Founders():
     def clean_entry(self, entry, searched_zipcode):
         name = entry[0]
         address = entry[1] + " " + entry[2]
-        number = parse_number(entry)
-        email = parse_email(entry)
-        zipcode = parse_zipcode(entry[2])
+        number = self.parse_number(entry)
+        email = self.parse_email(entry)
+        zipcode = self.parse_zipcode(entry[2])
 
         if zipcode != searched_zipcode:
-            zipcode = parse_zipcode(entry[3])
+            zipcode = self.parse_zipcode(entry[3])
             address += " " + entry[3]
 
         if zipcode != searched_zipcode:
@@ -352,7 +352,7 @@ class Founders():
 
             for span in spans:
                 entry.append(span.text)
-            entry, entry_zip = clean_entry(entry, zipcode)
+            entry, entry_zip = self.clean_entry(entry, zipcode)
 
             if entry_zip == zipcode:
                 agencies_in_zip.append(entry)
@@ -361,4 +361,124 @@ class Founders():
             agencies_in_zip.append(['no results', 'no results', 'no results', 'no results', zipcode])
 
         return agencies_in_zip
+
+
+class Kemper:
+    def __init__(self):
+        pass
+
+    def get_source_code(self, zipcode):
+        # initialize and specify executable location because it's hard to add variables to PATH without admin rights
+        driver = initialize_webdriver()
+        driver.get("https://www.kemper.com/get-started/find-an-agent")
+
+        # wait until the search bar is found by id or 10 seconds have passed
+        search_bar = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "edit-search-by-location-zip")))  # the search bar's id
+        search_bar.clear()
+        search_bar.send_keys(zipcode)
+
+        # no id so had to use xpath. Useful when a close parent element has an id.
+        checkbox = driver.find_element_by_xpath("//div[@id='edit-select-insurance-products']/div[1]/label[1]")
+        checkbox.click()
+
+        button = driver.find_element_by_id('edit-actions-submit')
+        button.click()
+
+        # self-contained element used by the Google Maps API, loads content at runtime with javascript
+        iframe = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//*[@id='block-kemper-cohesion-subtheme-content']/iframe")))
+
+        iframe_src = iframe.get_attribute('src')
+        driver.get(iframe_src)
+        time.sleep(5)  # sleeping to wait for page load. same as WebDriverWait, but there's no specific element to look
+        # for, and we can't guarantee that once one element is found everything is loaded.
+
+        # Checking for Kemper page errors that occur when some zip codes are searched.
+        logs = driver.get_log('browser')
+        for log in logs:
+            if log['level'] == "SEVERE":
+                print("Kemper page error for " + str(zipcode) + ". Moving on.")
+                driver.close()
+                return 'Error'
+
+        source_code = driver.page_source
+
+        # checking for "no results found" message
+        try:
+            error_message = driver.find_element_by_xpath(
+                '/html/body/app-root/div/find-agent-wizard/search-stepper/section/div/search-agent-map/div/div')
+            if error_message.text == "No agents found, please refine your search parameters.":
+                print("No results found for " + str(zipcode) + ". Moving on.")
+                driver.close()
+                return 'No Results'
+        except:
+            pass
+
+        driver.close()
+
+        return source_code
+
+    def filter_for_zipcode_match(self, ls, zipcode):
+        filtered_ls = []
+
+        for entry in ls:
+            entry_zip = entry[3]
+
+            if entry_zip == zipcode:
+                filtered_ls.append(entry)
+
+        return filtered_ls
+
+    def parse_data(self, source_code, zipcode):
+        if source_code == 'No Results':
+            return [['No results', 'No results', 'No results', zipcode]]
+
+        if source_code == 'Error':
+            return [['Error', 'Error', 'Error', zipcode]]
+
+        soup = BeautifulSoup(source_code, 'html.parser')
+
+        table = soup.find_all('table', class_='table table-hover')[
+            1]  # there are two tables found on the page. Selecting
+        # the second one.
+
+        agencies_in_zip = []
+
+        for row in table.select('tr'):
+            entry = [e.text for e in row.select("th, td")]  # this is a list comprehension. Native python shortcut.
+            del entry[-1]  # garbage
+
+            # What follows is crazy string manipulation that's very specific to the particular format found on the web page.
+            # It just takes what originally is one string and breaks it into name and address. Number is separate from the start.
+            # There might be better way, but this works... for now.
+
+            if entry[0] == '':  # skips the first element in the table because it's not an agency.
+                continue
+
+            string = entry[0]
+            split_list = string.split("  ")
+            name = split_list[0].strip()
+            address = split_list[-2] + " " + split_list[-1]
+            split_list = address.split('(')
+            address = split_list[0].strip()
+
+            if entry[1] != '':
+                number = entry[1]
+            else:
+                number = "Not available"
+
+            entry_zip = address.split()[-1]
+
+            entry = [name, address, number, entry_zip]
+
+            agencies_in_zip.append(entry)
+
+        agencies_in_zip = self.filter_for_zipcode_match(agencies_in_zip, zipcode)
+
+        if len(agencies_in_zip) == 0:
+            agencies_in_zip = [['No results', 'No results', 'No results', zipcode]]
+
+        return agencies_in_zip
+
 

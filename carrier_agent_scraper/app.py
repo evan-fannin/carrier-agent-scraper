@@ -81,9 +81,9 @@ class App:
             try:
                 data = self.get_zip_data(zipcode)
             except Exception as error:
-                # print('Failure.')
-                # print(repr(error))
-                # traceback.print_exc(file=sys.stdout)
+                print('Failure.')
+                print(repr(error))
+                traceback.print_exc(file=sys.stdout)
                 return agencies
 
             agencies.extend(data)
